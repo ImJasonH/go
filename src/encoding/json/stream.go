@@ -189,9 +189,9 @@ func (enc *Encoder) Encode(v interface{}) error {
 	if enc.err != nil {
 		return enc.err
 	}
-	e := newEncodeState()
-	err := e.marshal(v, encOpts{escapeHTML: enc.escapeHTML})
-	if err != nil {
+	var buf bytes.Buffer
+	e := newEncodeState(&buf)
+	if err := e.marshal(v, encOpts{escapeHTML: enc.escapeHTML}); err != nil {
 		return err
 	}
 
@@ -203,18 +203,18 @@ func (enc *Encoder) Encode(v interface{}) error {
 	// digits coming.
 	e.WriteByte('\n')
 
-	b := e.Bytes()
+	b := buf.Bytes()
 	if enc.indentPrefix != "" || enc.indentValue != "" {
 		if enc.indentBuf == nil {
 			enc.indentBuf = new(bytes.Buffer)
 		}
 		enc.indentBuf.Reset()
-		err = Indent(enc.indentBuf, b, enc.indentPrefix, enc.indentValue)
-		if err != nil {
+		if err := Indent(enc.indentBuf, b, enc.indentPrefix, enc.indentValue); err != nil {
 			return err
 		}
 		b = enc.indentBuf.Bytes()
 	}
+	var err error
 	if _, err = enc.w.Write(b); err != nil {
 		enc.err = err
 	}

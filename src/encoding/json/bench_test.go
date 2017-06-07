@@ -93,6 +93,30 @@ func BenchmarkCodeEncoder(b *testing.B) {
 	b.SetBytes(int64(len(codeJSON)))
 }
 
+func BenchmarkCodeEncoderDumbDiscard(b *testing.B) {
+	if codeJSON == nil {
+		b.StopTimer()
+		codeInit()
+		b.StartTimer()
+	}
+	b.RunParallel(func(pb *testing.PB) {
+		enc := NewEncoder(dumbDiscard{})
+		for pb.Next() {
+			if err := enc.Encode(&codeStruct); err != nil {
+				b.Fatal("Encode:", err)
+			}
+		}
+	})
+	b.SetBytes(int64(len(codeJSON)))
+}
+
+// dumbDiscard is like ioutil.Discard except it doesn't support WriteString or
+// WriteByte. This difference helps benchmark streaming to Writers that don't
+// support these methods.
+type dumbDiscard struct{}
+
+func (d dumbDiscard) Write(b []byte) (int, error) { return len(b), nil }
+
 func BenchmarkCodeMarshal(b *testing.B) {
 	if codeJSON == nil {
 		b.StopTimer()
